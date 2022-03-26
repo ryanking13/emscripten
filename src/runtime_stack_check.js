@@ -8,6 +8,7 @@
 // Initializes the stack cookie. Called at the startup of main and at the startup of each thread in pthreads mode.
 function writeStackCookie() {
   var max = _emscripten_stack_get_end();
+  {{{ pointerToDouble('max') }}}
 #if ASSERTIONS
   assert((max & 3) == 0);
 #endif
@@ -27,6 +28,7 @@ function checkStackCookie() {
   if (ABORT) return;
 #endif
   var max = _emscripten_stack_get_end();
+  {{{ pointerToDouble('max') }}}
   var cookie1 = {{{ makeGetValue('max', 0, 'u32') }}};
   var cookie2 = {{{ makeGetValue('max', 4, 'u32') }}};
   if (cookie1 != 0x2135467 || cookie2 != 0x89BACDFE) {

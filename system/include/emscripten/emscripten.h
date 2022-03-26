@@ -20,6 +20,8 @@
  *    is up at http://kripken.github.io/emscripten-site/docs/api_reference/emscripten.h.html
  */
 
+#include <stdint.h>
+
 #include "em_asm.h"
 #include "em_macros.h"
 #include "em_types.h"
@@ -136,7 +138,7 @@ int emscripten_get_worker_queue_size(worker_handle worker);
 
 // misc.
 
-int emscripten_get_compiler_setting(const char *name);
+intptr_t emscripten_get_compiler_setting(const char *name);
 int emscripten_has_asyncify(void);
 
 void emscripten_debugger(void);

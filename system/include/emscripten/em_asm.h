@@ -18,6 +18,9 @@ extern "C" {
 // C++ needs the nothrow attribute so -O0 doesn't lower these calls as invokes.
 __attribute__((nothrow))
 int emscripten_asm_const_int(const char* code, const char* arg_sigs, ...);
+#ifdef __wasm64__
+void* emscripten_asm_const_ptr(const char* code, const char* arg_sigs, ...);
+#endif
 __attribute__((nothrow))
 double emscripten_asm_const_double(const char* code, const char* arg_sigs, ...);
 
@@ -42,6 +45,7 @@ void emscripten_asm_const_async_on_main_thread(
 #define EM_ASM_ERROR _Pragma("GCC error(\"EM_ASM does not work in -std=c* modes, use -std=gnu* modes instead\")")
 #define EM_ASM(...) EM_ASM_ERROR
 #define EM_ASM_INT(...) EM_ASM_ERROR
+#define EM_ASM_PTR(...) EM_ASM_ERROR
 #define EM_ASM_DOUBLE(...) EM_ASM_ERROR
 #define MAIN_THREAD_EM_ASM(...) EM_ASM_ERROR
 #define MAIN_THREAD_EM_ASM_INT(...) EM_ASM_ERROR
@@ -67,6 +71,18 @@ void emscripten_asm_const_async_on_main_thread(
 // We can use the generic selection C11 feature (that clang supports pre-C11
 // as an extension) to emulate function overloading in C.
 // All pointer types should go through the default case.
+#if __wasm64__
+#define _EM_ASM_SIG_CHAR(x) _Generic((x), \
+    float: 'f', \
+    double: 'd', \
+    int: 'i', \
+    short: 'i', \
+    char: 'i', \
+    signed char: 'i', \
+    long long: 'j', \
+    unsigned: 'i', \
+    default: 'p')
+#else
 #define _EM_ASM_SIG_CHAR(x) _Generic((x), \
     float: 'f', \
     double: 'd', \
@@ -74,6 +90,7 @@ void emscripten_asm_const_async_on_main_thread(
     long long: 'j', \
     unsigned: 'i', \
     default: 'i')
+#endif
 
 // This indirection is needed to allow us to concatenate computed results, e.g.
 //   #define BAR(N) _EM_ASM_CONCATENATE(FOO_, N)
@@ -143,7 +160,11 @@ template<> struct __em_asm_sig<bool> { static const char value = 'i'; };
 template<> struct __em_asm_sig<wchar_t> { static const char value = 'i'; };
 template<> struct __em_asm_sig<long long> { static const char value = 'j'; };
 template<> struct __em_asm_sig<unsigned long long> { static const char value = 'j'; };
+#if __wasm64__
+template<typename T> struct __em_asm_sig<T*> { static const char value = 'p'; };
+#else
 template<typename T> struct __em_asm_sig<T*> { static const char value = 'i'; };
+#endif
 
 // Explicit support for enums, they're passed as int via variadic arguments.
 template<bool> struct __em_asm_if { };
@@ -195,6 +216,12 @@ const char __em_asm_sig_builder<__em_asm_type_tuple<Args...> >::buffer[] = { __e
 
 // Runs the given JavaScript code on the calling thread (synchronously), and returns an integer back.
 #define EM_ASM_INT(code, ...) emscripten_asm_const_int(CODE_EXPR(#code) _EM_ASM_PREP_ARGS(__VA_ARGS__))
+
+#ifdef __wasm64__
+#define EM_ASM_PTR(code, ...) emscripten_asm_const_ptr(CODE_EXPR(#code) _EM_ASM_PREP_ARGS(__VA_ARGS__))
+#else
+#define EM_ASM_PTR(code, ...) emscripten_asm_const_int(CODE_EXPR(#code) _EM_ASM_PREP_ARGS(__VA_ARGS__))
+#endif
 
 // Runs the given JavaScript code on the calling thread (synchronously), and returns a double back.
 #define EM_ASM_DOUBLE(code, ...) emscripten_asm_const_double(CODE_EXPR(#code) _EM_ASM_PREP_ARGS(__VA_ARGS__))

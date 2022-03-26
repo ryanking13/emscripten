@@ -23,6 +23,14 @@ function getSafeHeapType(bytes, isFloat) {
 var SAFE_HEAP_COUNTER = 0;
 #endif
 
+function getSbrk() {
+#if MEMORY64
+  return Number(_sbrk(BigInt(0))) >>> 0;
+#else
+  return _sbrk() >>> 0;
+#endif
+}
+
 /** @param {number|boolean=} isFloat */
 function SAFE_HEAP_STORE(dest, value, bytes, isFloat) {
 #if CAN_ADDRESS_2GB
@@ -42,7 +50,7 @@ function SAFE_HEAP_STORE(dest, value, bytes, isFloat) {
 #else
   if (runtimeInitialized) {
 #endif
-    var brk = _sbrk() >>> 0;
+    var brk = getSbrk();
     if (dest + bytes > brk) abort('segmentation fault, exceeded the top of the available dynamic heap when storing ' + bytes + ' bytes to address ' + dest + '. DYNAMICTOP=' + brk);
     assert(brk >= _emscripten_stack_get_base()); // sbrk-managed memory must be above the stack
     assert(brk <= HEAP8.length);
@@ -70,7 +78,7 @@ function SAFE_HEAP_LOAD(dest, bytes, unsigned, isFloat) {
 #else
   if (runtimeInitialized) {
 #endif
-    var brk = _sbrk() >>> 0;
+    var brk = getSbrk();
     if (dest + bytes > brk) abort('segmentation fault, exceeded the top of the available dynamic heap when loading ' + bytes + ' bytes from address ' + dest + '. DYNAMICTOP=' + brk);
     assert(brk >= _emscripten_stack_get_base()); // sbrk-managed memory must be above the stack
     assert(brk <= HEAP8.length);

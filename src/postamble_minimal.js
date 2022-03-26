@@ -21,7 +21,11 @@ function run() {
   // the application.
   var ret = _emscripten_proxy_main();
 #else
+#if MEMORY64
+  var ret = _main(0, BigInt(0));
+#else
   var ret = _main();
+#endif
 
 #if EXIT_RUNTIME
   callRuntimeCallbacks(__ATEXIT__);

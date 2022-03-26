@@ -103,6 +103,9 @@ function getCFunc(ident) {
 function ccall(ident, returnType, argTypes, args, opts) {
   // For fast lookup of conversion functions
   var toC = {
+#if MEMORY64
+    'pointer': (p) => BigInt(p),
+#endif
     'string': function(str) {
       var ret = 0;
       if (str !== null && str !== undefined && str !== 0) { // null string
@@ -111,17 +114,25 @@ function ccall(ident, returnType, argTypes, args, opts) {
         ret = stackAlloc(len);
         stringToUTF8(str, ret, len);
       }
+      {{{ doubleToPointer('ret') }}}
       return ret;
     },
     'array': function(arr) {
       var ret = stackAlloc(arr.length);
       writeArrayToMemory(arr, ret);
+      {{{ doubleToPointer('ret') }}}
       return ret;
     }
   };
 
   function convertReturnValue(ret) {
-    if (returnType === 'string') return UTF8ToString(ret);
+    if (returnType === 'string') {
+      {{{ pointerToDouble('ret') }}}
+      return UTF8ToString(ret);
+    }
+#if MEMORY64
+    if (returnType === 'pointer') return Number(ret);
+#endif
     if (returnType === 'boolean') return Boolean(ret);
     return ret;
   }
@@ -767,20 +778,21 @@ function instrumentWasmExportsForMemory64(exports) {
     (function(name) {
       var original = exports[name];
       var replacement = original;
-      if (name === 'stackAlloc' || name === 'malloc') {
-        // get one i64, return an i64
+      if (['stackAlloc', 'emscripten_builtin_malloc', 'malloc', '__getTypeName'].includes(name)) {
+        // get one i64, return an i64.
         replacement = (x) => {
           var r = Number(original(BigInt(x)));
           return r;
         };
-      } else if (name === 'free') {
+      } else if (['setThrew', 'free', 'stackRestore', '__cxa_is_pointer_type'].includes(name)) {
         // get one i64
         replacement = (x) => {
           original(BigInt(x));
         };
-      } else if (name === 'emscripten_stack_get_end' ||
-                 name === 'emscripten_stack_get_base' ||
-                 name === 'emscripten_stack_get_current') {
+      } else if (['stackSave', 'emscripten_stack_get_end',
+                  'emscripten_stack_get_base', 'pthread_self',
+                  'emscripten_stack_get_current',
+                  '__errno_location'].includes(name)) {
         // return an i64
         replacement = () => {
           var r = Number(original());
@@ -793,9 +805,26 @@ function instrumentWasmExportsForMemory64(exports) {
           return r;
         };
       } else if (name === 'main') {
-        // get a i64 as second arg
+        // Special case for main.  Use `function` here rather than arrow
+        // function to avoid implicit `strict`.
+        replacement = function(x, y) {
+          // Pass an extra 0 in case its a 3-argument form of main.  Sadly we
+          // can't just omit that argument like we can for wasm32 because the
+          // missing third argument will generate:
+          // `TypeError: Cannot convert undefined to a BigInt`.
+          // See https://github.com/WebAssembly/JS-BigInt-integration/issues/12
+          return original(x, BigInt(y), BigInt(0));
+        };
+      } else if (['emscripten_stack_set_limits', '__set_stack_limits'].includes(name)) {
+        // get 2 i64 arguments
         replacement = (x, y) => {
-          var r = original(x, BigInt(y));
+          var r = original(BigInt(x), BigInt(y));
+          return r;
+        };
+      } else if (name === '__cxa_can_catch') {
+        // get 3 i64 arguments
+        replacement = (x, y, z) => {
+          var r = original(BigInt(x), BigInt(y), BigInt(z));
           return r;
         };
       }

@@ -150,11 +150,15 @@ function callMain(args) {
 
   var argc = args.length+1;
   var argv = stackAlloc((argc + 1) * {{{ Runtime.POINTER_SIZE }}});
-  HEAP32[argv >> 2] = allocateUTF8OnStack(thisProgram);
+  var argv_pos = argv;
+  {{{ makeSetValue('argv_pos', 0, 'allocateUTF8OnStack(thisProgram)', POINTER_TYPE) }}};
+  argv_pos += {{{ Runtime.POINTER_SIZE }}};
   for (var i = 1; i < argc; i++) {
-    HEAP32[(argv >> 2) + i] = allocateUTF8OnStack(args[i - 1]);
+    {{{ makeSetValue('argv_pos', 0, 'allocateUTF8OnStack(args[i - 1])', POINTER_TYPE) }}};
+    argv_pos += {{{ Runtime.POINTER_SIZE }}};
   }
-  HEAP32[(argv >> 2) + argc] = 0;
+  // null terminate the pointer list
+  {{{ makeSetValue('argv_pos', 0, '0', POINTER_TYPE) }}};
 #else
   var argc = 0;
   var argv = 0;
@@ -176,6 +180,7 @@ function callMain(args) {
     // that if we get here main returned zero.
     var ret = 0;
 #else
+    {{{ doubleToPointer('argv') }}}
     var ret = entryFunction(argc, argv);
 #endif // STANDALONE_WASM
 
@@ -215,7 +220,7 @@ function stackCheckInit() {
   // here.
   // TODO(sbc): Move writeStackCookie to native to to avoid this.
 #if RELOCATABLE
-  _emscripten_stack_set_limits({{{ to64(STACK_BASE) }}}, {{{ to64(STACK_MAX) }}});
+  _emscripten_stack_set_limits(STACK_BASE, STACK_MAX);
 #else
   _emscripten_stack_init();
 #endif

@@ -96,7 +96,7 @@ var LibraryEmVal = {
     }
   },
 
-  _emval_incref__sig: 'vi',
+  _emval_incref__sig: 'vp',
   _emval_incref__deps: ['$emval_handle_array'],
   _emval_incref: function(handle) {
     if (handle > 4) {
@@ -104,7 +104,7 @@ var LibraryEmVal = {
     }
   },
 
-  _emval_decref__sig: 'vi',
+  _emval_decref__sig: 'vp',
   _emval_decref__deps: ['$emval_free_list', '$emval_handle_array'],
   _emval_decref: function(handle) {
     if (handle > 4 && 0 === --emval_handle_array[handle].refcount) {
@@ -113,7 +113,7 @@ var LibraryEmVal = {
     }
   },
 
-  _emval_run_destructors__sig: 'vi',
+  _emval_run_destructors__sig: 'vp',
   _emval_run_destructors__deps: ['_emval_decref', '$Emval', '$runDestructors'],
   _emval_run_destructors: function(handle) {
     var destructors = Emval.toValue(handle);
@@ -122,34 +122,36 @@ var LibraryEmVal = {
   },
 
   _emval_new_array__deps: ['$Emval'],
+  _emval_new_array__sig: 'p',
   _emval_new_array: function() {
     return Emval.toHandle([]);
   },
 
   _emval_new_object__deps: ['$Emval'],
+  _emval_new_object__sig: 'p',
   _emval_new_object: function() {
     return Emval.toHandle({});
   },
 
-  _emval_new_cstring__sig: 'ii',
+  _emval_new_cstring__sig: 'pp',
   _emval_new_cstring__deps: ['$getStringOrSymbol', '$Emval'],
   _emval_new_cstring: function(v) {
     return Emval.toHandle(getStringOrSymbol(v));
   },
 
-  _emval_new_u8string__sig: 'ii',
+  _emval_new_u8string__sig: 'pp',
   _emval_new_u8string__deps: ['$Emval'],
   _emval_new_u8string: function(v) {
     return Emval.toHandle(UTF8ToString(v));
   },
 
-  _emval_new_u16string__sig: 'ii',
+  _emval_new_u16string__sig: 'pp',
   _emval_new_u16string__deps: ['$Emval'],
   _emval_new_u16string: function(v) {
     return Emval.toHandle(UTF16ToString(v));
   },
 
-  _emval_take_value__sig: 'iii',
+  _emval_take_value__sig: 'ppp',
   _emval_take_value__deps: ['$Emval', '$requireRegisteredType'],
   _emval_take_value: function(type, argv) {
     type = requireRegisteredType(type, '_emval_take_value');
@@ -259,7 +261,7 @@ var LibraryEmVal = {
     })()('return this')();
   },
 #endif
-  _emval_get_global__sig: 'ii',
+  _emval_get_global__sig: 'pp',
   _emval_get_global__deps: ['$Emval', '$getStringOrSymbol', '$emval_get_global'],
   _emval_get_global: function(name) {
     if (name===0) {
@@ -276,7 +278,7 @@ var LibraryEmVal = {
     return Emval.toHandle(Module[name]);
   },
 
-  _emval_get_property__sig: 'iii',
+  _emval_get_property__sig: 'ppp',
   _emval_get_property__deps: ['$Emval'],
   _emval_get_property: function(handle, key) {
     handle = Emval.toValue(handle);
@@ -284,7 +286,7 @@ var LibraryEmVal = {
     return Emval.toHandle(handle[key]);
   },
 
-  _emval_set_property__sig: 'viii',
+  _emval_set_property__sig: 'vppp',
   _emval_set_property__deps: ['$Emval'],
   _emval_set_property: function(handle, key, value) {
     handle = Emval.toValue(handle);
@@ -293,7 +295,7 @@ var LibraryEmVal = {
     handle[key] = value;
   },
 
-  _emval_as__sig: 'iiii',
+  _emval_as__sig: 'ippp',
   _emval_as__deps: ['$Emval', '$requireRegisteredType'],
   _emval_as: function(handle, returnType, destructorsRef) {
     handle = Emval.toValue(handle);
@@ -352,7 +354,7 @@ var LibraryEmVal = {
     return !object;
   },
 
-  _emval_call__sig: 'iiiii',
+  _emval_call__sig: 'ppipp',
   _emval_call__deps: ['_emval_lookupTypes', '$Emval'],
   _emval_call: function(handle, argCount, argTypes, argv) {
     handle = Emval.toValue(handle);
@@ -398,7 +400,7 @@ var LibraryEmVal = {
   },
 
   $emval_registeredMethods: [],
-  _emval_get_method_caller__sig: 'iii',
+  _emval_get_method_caller__sig: 'pip',
   _emval_get_method_caller__deps: ['_emval_addMethodCaller', '_emval_lookupTypes', '$new_', '$makeLegalFunctionName', '$emval_registeredMethods'],
   _emval_get_method_caller: function(argCount, argTypes) {
     var types = __emval_lookupTypes(argCount, argTypes);
@@ -479,7 +481,7 @@ var LibraryEmVal = {
     return caller(handle, methodName, __emval_allocateDestructors(destructorsRef), args);
   },
 
-  _emval_call_void_method__sig: 'viiii',
+  _emval_call_void_method__sig: 'vpppp',
   _emval_call_void_method__deps: ['_emval_allocateDestructors', '$getStringOrSymbol', '$emval_methodCallers', '$Emval'],
   _emval_call_void_method: function(caller, handle, methodName, args) {
     caller = emval_methodCallers[caller];

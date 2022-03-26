@@ -397,6 +397,8 @@ class RunnerCore(unittest.TestCase, metaclass=RunnerMeta):
     return self.get_setting('WASM') != 0
 
   def check_dylink(self):
+    if self.get_setting('MEMORY64'):
+      self.skipTest('MEMORY64 does not yet support dynamic linking')
     if self.get_setting('ALLOW_MEMORY_GROWTH') == 1 and not self.is_wasm():
       self.skipTest('no dynamic linking with memory growth (without wasm)')
     if not self.is_wasm():
@@ -431,6 +433,8 @@ class RunnerCore(unittest.TestCase, metaclass=RunnerMeta):
     self.require_node()
     self.set_setting('USE_PTHREADS')
     self.emcc_args += ['-Wno-pthreads-mem-growth']
+    if self.get_setting('MEMORY64'):
+      self.skipTest('node pthreads not yet supported with MEMORY64')
     if self.get_setting('MINIMAL_RUNTIME'):
       self.skipTest('node pthreads not yet supported with MINIMAL_RUNTIME')
     self.js_engines = [config.NODE_JS]
@@ -1759,6 +1763,7 @@ def build_library(name,
     env = clang_native.get_clang_native_env()
   else:
     env = os.environ.copy()
+  print(env_init)
   env.update(env_init)
 
   if not native:

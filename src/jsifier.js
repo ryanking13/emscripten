@@ -95,14 +95,20 @@ function runJSify(functionsOnly) {
     // to double (this limits the range to int53).
     // And convert the return value if the function returns a pointer.
     return modifyFunction(snippet, (name, args, body) => {
-      const argNames = args.split(',');
+      const argNames = (args && args.length) ? args.split(',') : [];
+      assert(!argNames.length || argNames.length === sig.length - 1, `${name}: bad JS library signature: ${sig}.  Does not match: ${argNames}.`);
       let newArgs = [];
       let argConvertions = '';
       for (let i = 1; i < sig.length; i++) {
         const name = argNames[i - 1];
         if (sig[i] == 'p') {
-          argConvertions += `${name} = Number(${name})\n`;
-          newArgs.push(`Number(${name})`);
+          if (name) {
+            argConvertions += `${name} = Number(${name})\n`;
+            newArgs.push(`Number(${name})`);
+          } else {
+            argConvertions += `arguments[${i - 1}] = Number(arguments[${i - 1}])\n`;
+            newArgs.push(`Number(arguments[${i - 1}])`);
+          }
         } else {
           newArgs.push(name);
         }

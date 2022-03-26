@@ -812,6 +812,20 @@ function makeDynCall(sig, funcPtr) {
   }
   args = args.join(', ');
 
+  const needArgConversion = MEMORY64 && sig.includes('p');
+  let callArgs = args;
+  if (needArgConversion) {
+    callArgs = [];
+    for (let i = 1; i < sig.length; ++i) {
+      if (sig[i] == 'p') {
+        callArgs.push(`BigInt(a${i})`);
+      } else {
+        callArgs.push(`a${i}`);
+      }
+    }
+    callArgs = callArgs.join(', ');
+  }
+
   if (funcPtr === undefined) {
     printErr(`warning: ${currentlyParsedFilename}: \
 Legacy use of {{{ makeDynCall("${sig}") }}}(funcPtr, arg1, arg2, ...). \
@@ -827,9 +841,9 @@ Please update to new syntax.`);
           return `(function(${args}) { /* a dynamic function call to signature ${sig}, but there are no exported function pointers with that signature, so this path should never be taken. Build with ASSERTIONS enabled to validate. */ })`;
         }
       }
-      return `(function(cb, ${args}) { ${returnExpr} getDynCaller("${sig}", cb)(${args}) })`;
+      return `(function(cb, ${args}) { ${returnExpr} getDynCaller("${sig}", cb)(${callArgs}) })`;
     } else {
-      return `(function(cb, ${args}) { ${returnExpr} getWasmTableEntry(cb)(${args}) })`;
+      return `(function(cb, ${args}) { ${returnExpr} getWasmTableEntry(cb)(${callArgs}) })`;
     }
   }
 
@@ -844,13 +858,15 @@ Please update to new syntax.`);
 
     const dyncall = exportedAsmFunc(`dynCall_${sig}`);
     if (sig.length > 1) {
-      return `(function(${args}) { ${returnExpr} ${dyncall}.apply(null, [${funcPtr}, ${args}]); })`;
-    } else {
-      return `(function() { ${returnExpr} ${dyncall}.call(null, ${funcPtr}); })`;
+      return `(function(${args}) { ${returnExpr} ${dyncall}.apply(null, [${funcPtr}, ${callArgs}]); })`;
     }
-  } else {
-    return `getWasmTableEntry(${funcPtr})`;
+    return `(function() { ${returnExpr} ${dyncall}.call(null, ${funcPtr}); })`;
   }
+
+  if (needArgConversion) {
+    return `(function(${args}) { ${returnExpr} getWasmTableEntry(${funcPtr}).call(null, ${callArgs}) })`;
+  }
+  return `getWasmTableEntry(${funcPtr})`;
 }
 
 function heapAndOffset(heap, ptr) { // given   HEAP8, ptr   , we return    splitChunk, relptr
@@ -1096,6 +1112,22 @@ function receiveI64ParamAsI32s(name) {
     //  * acorn needs to be upgraded, and to set ecmascript version >= 11
     //  * terser needs to be upgraded
     return `var ${name}_low = Number(${name}_bigint & BigInt(0xffffffff)) | 0, ${name}_high = Number(${name}_bigint >> BigInt(32)) | 0;`;
+  }
+  return '';
+}
+
+function pointerToDouble(name) {
+  if (MEMORY64) {
+    // Just convert the bigint into a double.
+    return `${name} = Number(${name});`;
+  }
+  return '';
+}
+
+function doubleToPointer(name) {
+  if (MEMORY64) {
+    // Just convert the bigint into a double.
+    return `${name} = BigInt(${name});`;
   }
   return '';
 }
