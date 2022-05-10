@@ -9206,6 +9206,14 @@ NODEFS is no longer included by default; build with -lnodefs.js
     self.emcc_args += ['--js-library=' + test_file('core/js_library_i64_params.js')]
     self.do_core_test('js_library_i64_params.c')
 
+  def test_attribute_destructor(self):
+    output = self.do_runf(test_file('core/test_attribute_destructor.c'), 'main done')
+    self.assertNotContained('my_dtor', output)
+
+    # Same again but with EXIT_RUNTIME
+    self.set_setting('EXIT_RUNTIME')
+    self.do_runf(test_file('core/test_attribute_destructor.c'), 'main done\nmy_dtor\n')
+
 
 # Generate tests for everything
 def make_run(name, emcc_args, settings=None, env=None, node_args=None, require_v8=False, v8_args=None):
