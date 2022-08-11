@@ -649,9 +649,15 @@ var LibraryDylink = {
         if (!ENVIRONMENT_IS_PTHREAD) {
 #endif
           var init = moduleExports['__wasm_call_ctors'];
+          var init_success = true;
           if (init) {
             if (runtimeInitialized) {
-              init();
+              try {
+                init();
+              } catch (e) {
+                init_success = false;
+                err('Error in initializing a module: ' + e);
+              }
             } else {
               // we aren't ready to run compiled code yet
               __ATINIT__.push(init);
@@ -665,6 +671,17 @@ var LibraryDylink = {
               __RELOC_FUNCS__.push(applyRelocs);
             }
           }
+
+          if (!init_success) {
+              try {
+                init();
+                err('successfully run __wasm_call_ctors on retrial!');
+              } catch (e) {
+                failed = true;
+                err('[retrial] error in initializing a module: ' + e);
+              }
+          }
+
 #if USE_PTHREADS
         }
 #endif
