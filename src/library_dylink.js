@@ -598,6 +598,12 @@ var LibraryDylink = {
             case '__table_base':
               return tableBase;
           }
+
+          var rtn = GOT[prop];
+          if (rtn) {
+            return rtn;
+          }
+
           if (prop in asmLibraryArg) {
             // No stub needed, symbol already exists in symbol table
             return asmLibraryArg[prop];
