@@ -572,7 +572,10 @@ var LibraryDylink = {
     registerDynCallSymbols(exports);
 #endif
     // add symbols into global namespace TODO: weak linking etc.
-    for (var [sym, exp] of Object.entries(exports)) {
+    // Use `for...in` rather than `Object.entries` to avoid allocating an array
+    // of [name, value] pairs, which is slow when there are many exports.
+    for (var sym in exports) {
+      var exp = exports[sym];
 #if ASSERTIONS == 2
       if (isSymbolDefined(sym)) {
         var curr = wasmImports[sym], next = exp;
